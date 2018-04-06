@@ -1,24 +1,80 @@
 #!/bin/python3
-from urllib.request import urlopen, Request
-from re import findall
+#Copyright © 2018 Victor Oliveira <victor.oliveira@gmx.com>
+#This work is free. You can redistribute it and/or modify it under the
+#terms of the Do What The Fuck You Want To Public License, Version 2,
+#as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
+
+import urllib.request
+import html.parser
+import argparse
+
+class MyHTMLParser(argparse.HTMLParser):
+    def __init__(self):
+        argparse.HTMLParser.__init__(self)
+        self.data = list()
+    def handle_data(self, data):
+        data = data.strip()
+        if data:
+            self.data.append(data)
+
+args_parser = argparse.ArgumentParser()
+args_parser.add_argument('-n',
+                        help='Exibe apenas o número',
+                        action='store_true',
+                        default=False)
+args_parser.add_argument('-P',
+                        help='Exibe apenas o plano contratado',
+                        action='store_true',
+                        default=False)
+args_parser.add_argument('-f',
+                        help='Exibe apenas o fechamento do ciclo',
+                        action='store_true',
+                        default=False)
+args_parser.add_argument('-c',
+                        help='Exibe apenas o total de consumo (MB)',
+                        action='store_true',
+                        default=False)
+args_parser.add_argument('-p',
+                        help='Exibe apenas a porcentagem de consumo',
+                        action='store_true',
+                        default=False)
+args = args_parser.parse_args()
 
 ua = 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
 
-req = Request('http://consumo.claro.com.br/crypto/redirect?target=informacao')
+req = urllib.request.Request('http://consumo.claro.com.br/crypto/redirect?target=informacao')
 req.add_header('User-Agent', ua)
-req = urlopen(req)
+try:
+    req = urllib.request.urlopen(req)
+except urllib.error.URLError:
+    print('É necessário um modem da Claro')
+    exit(1)
 html = req.read().decode()
 
-consumo = findall('<div class="col-xs-6 izqbold">(.*?)<', html)[1]
-numero = findall('<div class="col-xs-6 izqbold">(.*?)<', html)[0]
-fechamento = findall('\d{2}/\d{2}/\d{4}', html)[0]
-plano = findall('<div class="col-xs-1 text-right">(.*?)<', html)[0]
-porcentagem = findall('<span class="new-indicator">(.*?)<', html)[0]
+html_parser = MyHTMLParser()
+html_parser.feed(html)
 
-ddd = numero[0:2]
-n1 = numero[2:7]
-n2 = numero[7:]
+numero = html_parser.data[14]
+plano = html_parser.data[16]
+fechamento = html_parser.data[18]
+consumo = html_parser.data[20]
+porcentagem = html_parser.data[10]
 
-numero = '{} {}-{}'.format(ddd, n1, n2)
-
-print('Número: {}\nConsumo: {}/{}\nPorcentagem de consumo: {}\nFechamento: {}'.format(numero, consumo, plano, porcentagem, fechamento))
+if args.n:
+    print(numero)
+elif args.P:
+    print(plano)
+elif args.f:
+    print(fechamento)
+elif args.c:
+    print(consumo)
+elif args.p:
+    print(porcentagem)
+else:
+    print('Número: {}\n\
+Plano contratado: {}\n\
+Fechamento do ciclo: {}\n\
+Total de consumo: {}\n\
+Porcentagem de consumo: {}'.format(
+        numero, plano, fechamento,
+        consumo, porcentagem))
