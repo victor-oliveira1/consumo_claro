@@ -8,7 +8,7 @@ import urllib.request
 import html.parser
 import argparse
 
-class MyHTMLParser(argparse.HTMLParser):
+class MyHTMLParser(html.parser.HTMLParser):
     def __init__(self):
         argparse.HTMLParser.__init__(self)
         self.data = list()
